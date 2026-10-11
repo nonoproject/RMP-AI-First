@@ -1,0 +1,6 @@
+{
+  "name": "Mizan AI — Requirements & Solution Lifecycle Platform",
+  "description": "Bilingual AI-first SaaS platform transforming natural-language business needs into structured, traceable, reviewable requirements, acceptance criteria, and living solution documents.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

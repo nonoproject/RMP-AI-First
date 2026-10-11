@@ -1,0 +1,341 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'awadsandal2@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+    function isBoundedStringList(arr) {
+      return arr is list && arr.size() <= 10 && (arr.size() == 0 || (arr[0] is string && arr[0].size() <= 128));
+    }
+
+    // Validation Blueprints
+    function isValidCompany(data) {
+      return data.keys().hasAll(['id', 'name', 'domain', 'defaultAiMode', 'privacyVerified', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'name', 'domain', 'defaultAiMode', 'privacyVerified', 'ownerId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+        data.domain is string && data.domain.size() >= 1 && data.domain.size() <= 200 &&
+        data.defaultAiMode is string && data.defaultAiMode.size() <= 32 && data.defaultAiMode in ['assistant', 'workflow', 'multi_agent'] &&
+        data.privacyVerified is bool &&
+        isValidId(data.ownerId) && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'companyId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'companyId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) && data.uid == request.auth.uid &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 256 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 200 &&
+        data.role is string && data.role.size() <= 32 && data.role in ['platform_admin', 'company_admin', 'product_manager', 'business_analyst', 'reviewer'] &&
+        isValidId(data.companyId) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPortfolio(data) {
+      return data.keys().hasAll(['id', 'companyId', 'code', 'name', 'description', 'status', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'companyId', 'code', 'name', 'description', 'status', 'ownerId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.companyId) &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 32 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+        data.description is string && data.description.size() <= 2000 &&
+        data.status is string && data.status.size() <= 32 && data.status in ['active', 'archived', 'planning'] &&
+        isValidId(data.ownerId) && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['id', 'companyId', 'portfolioId', 'parentProjectId', 'code', 'name', 'description', 'status', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'companyId', 'portfolioId', 'parentProjectId', 'code', 'name', 'description', 'status', 'ownerId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.companyId) &&
+        isValidId(data.portfolioId) &&
+        data.parentProjectId is string && data.parentProjectId.size() <= 128 &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 32 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+        data.description is string && data.description.size() <= 2000 &&
+        data.status is string && data.status.size() <= 32 && data.status in ['active', 'discovery', 'delivery', 'completed'] &&
+        isValidId(data.ownerId) && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidArtifact(data) {
+      return data.keys().hasAll(['id', 'code', 'companyId', 'portfolioId', 'projectId', 'type', 'title', 'description', 'rationale', 'status', 'validationStatus', 'validationNotes', 'version', 'sourceRefs', 'linkedArtifactIds', 'authorId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'code', 'companyId', 'portfolioId', 'projectId', 'type', 'title', 'description', 'rationale', 'status', 'validationStatus', 'validationNotes', 'version', 'sourceRefs', 'linkedArtifactIds', 'authorId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 32 &&
+        isValidId(data.companyId) &&
+        isValidId(data.portfolioId) &&
+        isValidId(data.projectId) &&
+        data.type is string && data.type.size() <= 32 && data.type in ['business_need', 'requirement', 'business_rule', 'user_story', 'acceptance_criteria', 'test_case', 'architecture_decision', 'api_spec', 'assumption', 'constraint', 'change_request', 'visual_asset'] &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 300 &&
+        data.description is string && data.description.size() <= 5000 &&
+        data.rationale is string && data.rationale.size() <= 2000 &&
+        data.status is string && data.status.size() <= 32 && data.status in ['draft', 'pending_review', 'approved', 'revision_requested', 'excluded'] &&
+        data.validationStatus is string && data.validationStatus.size() <= 32 && data.validationStatus in ['passed', 'failed', 'warning'] &&
+        data.validationNotes is string && data.validationNotes.size() <= 1000 &&
+        data.version is int && data.version >= 1 && data.version <= 10000 &&
+        isBoundedStringList(data.sourceRefs) &&
+        isBoundedStringList(data.linkedArtifactIds) &&
+        isValidId(data.authorId) && data.authorId == request.auth.uid &&
+        (data.type != 'acceptance_criteria' || data.status != 'approved' || data.validationStatus == 'passed') &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidLivingDocument(data) {
+      return data.keys().hasAll(['id', 'code', 'companyId', 'projectId', 'docType', 'title', 'content', 'status', 'version', 'sourceArtifactIds', 'authorId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'code', 'companyId', 'projectId', 'docType', 'title', 'content', 'status', 'version', 'sourceArtifactIds', 'authorId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 32 &&
+        isValidId(data.companyId) &&
+        isValidId(data.projectId) &&
+        data.docType is string && data.docType.size() <= 32 && data.docType in ['BRD', 'FRD', 'SRS', 'BUSINESS_RULES', 'USER_STORIES', 'ARCH_DECISIONS', 'API_SPECS', 'TEST_PLANS', 'SECURITY_NFR', 'HANDOVER'] &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 300 &&
+        data.content is string && data.content.size() <= 20000 &&
+        data.status is string && data.status.size() <= 32 && data.status in ['draft', 'approved', 'needs_sync'] &&
+        data.version is int && data.version >= 1 && data.version <= 10000 &&
+        isBoundedStringList(data.sourceArtifactIds) &&
+        isValidId(data.authorId) && data.authorId == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAiTask(data) {
+      return data.keys().hasAll(['id', 'companyId', 'projectId', 'intent', 'inferredContext', 'mode', 'currentStage', 'status', 'clarificationQuestions', 'planSummary', 'generatedArtifactIds', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'companyId', 'projectId', 'intent', 'inferredContext', 'mode', 'currentStage', 'status', 'clarificationQuestions', 'planSummary', 'generatedArtifactIds', 'ownerId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.companyId) &&
+        isValidId(data.projectId) &&
+        data.intent is string && data.intent.size() >= 1 && data.intent.size() <= 3000 &&
+        data.inferredContext is string && data.inferredContext.size() <= 2000 &&
+        data.mode is string && data.mode.size() <= 32 && data.mode in ['assistant', 'workflow', 'multi_agent'] &&
+        data.currentStage is int && data.currentStage >= 1 && data.currentStage <= 11 &&
+        data.status is string && data.status.size() <= 32 && data.status in ['running', 'paused', 'awaiting_clarification', 'awaiting_approval', 'completed', 'failed'] &&
+        data.clarificationQuestions is string && data.clarificationQuestions.size() <= 3000 &&
+        data.planSummary is string && data.planSummary.size() <= 3000 &&
+        isBoundedStringList(data.generatedArtifactIds) &&
+        isValidId(data.ownerId) && data.ownerId == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'companyId', 'actorId', 'actorEmail', 'action', 'targetType', 'targetId', 'details', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'companyId', 'actorId', 'actorEmail', 'action', 'targetType', 'targetId', 'details', 'createdAt']) &&
+        isValidId(data.id) &&
+        isValidId(data.companyId) &&
+        isValidId(data.actorId) && data.actorId == request.auth.uid &&
+        data.actorEmail is string && data.actorEmail.size() >= 3 && data.actorEmail.size() <= 256 &&
+        data.action is string && data.action.size() >= 1 && data.action.size() <= 200 &&
+        data.targetType is string && data.targetType.size() >= 1 && data.targetType.size() <= 100 &&
+        isValidId(data.targetId) &&
+        data.details is string && data.details.size() <= 2000 &&
+        data.createdAt is timestamp;
+    }
+
+    // Admins Registry
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && request.auth.uid == adminId;
+      allow list, create, update, delete: if false;
+    }
+
+    // 1. Companies Collection
+    match /companies/{companyId} {
+      allow get: if isSignedIn() && isValidId(companyId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidId(companyId) && incoming().id == companyId &&
+        isValidCompany(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isVerified() && isValidId(companyId) && isValidCompany(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (existing().ownerId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'domain', 'defaultAiMode', 'privacyVerified', 'updatedAt']))
+        );
+      allow delete: if false;
+    }
+
+    // 2. Users Collection (PII Isolated to Owner or Admin)
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && existing().uid == request.auth.uid;
+      allow create: if isVerified() && isValidId(userId) && request.auth.uid == userId &&
+        isValidUserProfile(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time &&
+        (incoming().role != 'platform_admin' || isAdmin()) &&
+        exists(/databases/$(database)/documents/companies/$(incoming().companyId));
+      allow update: if isVerified() && isValidId(userId) && isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().companyId == existing().companyId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (request.auth.uid == userId && incoming().role == existing().role && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt']))
+        );
+      allow delete: if false;
+    }
+
+    // 3. Portfolios Collection
+    match /portfolios/{portfolioId} {
+      allow get: if isSignedIn() && isValidId(portfolioId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidId(portfolioId) && incoming().id == portfolioId &&
+        isValidPortfolio(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/companies/$(incoming().companyId));
+      allow update: if isVerified() && isValidId(portfolioId) && isValidPortfolio(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().companyId == existing().companyId &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        existing().status != 'archived' &&
+        (
+          isAdmin() ||
+          (existing().ownerId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'status', 'updatedAt']))
+        );
+      allow delete: if isVerified() && isValidId(portfolioId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    // 4. Projects Collection
+    match /projects/{projectId} {
+      allow get: if isSignedIn() && isValidId(projectId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidId(projectId) && incoming().id == projectId &&
+        isValidProject(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/companies/$(incoming().companyId)) &&
+        exists(/databases/$(database)/documents/portfolios/$(incoming().portfolioId));
+      allow update: if isVerified() && isValidId(projectId) && isValidProject(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().companyId == existing().companyId &&
+        incoming().portfolioId == existing().portfolioId &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (existing().status != 'completed' || isAdmin()) &&
+        (
+          isAdmin() ||
+          (existing().ownerId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'status', 'updatedAt']))
+        );
+      allow delete: if isVerified() && isValidId(projectId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    // 5. Artifacts Collection
+    match /artifacts/{artifactId} {
+      allow get: if isSignedIn() && isValidId(artifactId) && (existing().authorId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && existing().authorId == request.auth.uid;
+      allow create: if isVerified() && isValidId(artifactId) && incoming().id == artifactId &&
+        isValidArtifact(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/companies/$(incoming().companyId)) &&
+        exists(/databases/$(database)/documents/projects/$(incoming().projectId));
+      allow update: if isVerified() && isValidId(artifactId) && isValidArtifact(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().companyId == existing().companyId &&
+        incoming().portfolioId == existing().portfolioId &&
+        incoming().projectId == existing().projectId &&
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          // Action 1: Review/Approval state transition
+          (existing().authorId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'validationStatus', 'validationNotes', 'version', 'updatedAt'])) ||
+          // Action 2: Content & Traceability edit
+          (existing().authorId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'rationale', 'status', 'validationStatus', 'validationNotes', 'version', 'sourceRefs', 'linkedArtifactIds', 'updatedAt']))
+        );
+      allow delete: if isVerified() && isValidId(artifactId) && (existing().authorId == request.auth.uid || isAdmin());
+    }
+
+    // 6. Living Documents Collection
+    match /livingDocuments/{docId} {
+      allow get: if isSignedIn() && isValidId(docId) && (existing().authorId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && existing().authorId == request.auth.uid;
+      allow create: if isVerified() && isValidId(docId) && incoming().id == docId &&
+        isValidLivingDocument(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/companies/$(incoming().companyId)) &&
+        exists(/databases/$(database)/documents/projects/$(incoming().projectId));
+      allow update: if isVerified() && isValidId(docId) && isValidLivingDocument(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().companyId == existing().companyId &&
+        incoming().projectId == existing().projectId &&
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (existing().authorId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'status', 'version', 'sourceArtifactIds', 'updatedAt']))
+        );
+      allow delete: if isVerified() && isValidId(docId) && (existing().authorId == request.auth.uid || isAdmin());
+    }
+
+    // 7. AI Tasks Collection
+    match /aiTasks/{taskId} {
+      allow get: if isSignedIn() && isValidId(taskId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerified() && isValidId(taskId) && incoming().id == taskId &&
+        isValidAiTask(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/companies/$(incoming().companyId));
+      allow update: if isVerified() && isValidId(taskId) && isValidAiTask(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().companyId == existing().companyId &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (existing().status != 'completed' || isAdmin()) &&
+        (
+          isAdmin() ||
+          (existing().ownerId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['projectId', 'inferredContext', 'mode', 'currentStage', 'status', 'clarificationQuestions', 'planSummary', 'generatedArtifactIds', 'updatedAt']))
+        );
+      allow delete: if isVerified() && isValidId(taskId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    // 8. Audit Logs Collection (Append-Only, Immutable)
+    match /auditLogs/{logId} {
+      allow get: if isSignedIn() && isValidId(logId) && (existing().actorId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && existing().actorId == request.auth.uid;
+      allow create: if isVerified() && isValidId(logId) && incoming().id == logId &&
+        isValidAuditLog(incoming()) &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/companies/$(incoming().companyId));
+      allow update, delete: if false;
+    }
+  }
+}

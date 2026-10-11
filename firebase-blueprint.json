@@ -1,0 +1,191 @@
+{
+  "entities": {
+    "Company": {
+      "title": "Company",
+      "description": "Tenant organization in the platform",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "maxLength": 200 },
+        "domain": { "type": "string", "maxLength": 200 },
+        "defaultAiMode": { "type": "string", "enum": ["assistant", "workflow", "multi_agent"] },
+        "privacyVerified": { "type": "boolean" },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "domain", "defaultAiMode", "privacyVerified", "ownerId", "createdAt", "updatedAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Tenant user profile and role assignment",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 200 },
+        "role": { "type": "string", "enum": ["platform_admin", "company_admin", "product_manager", "business_analyst", "reviewer"] },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "companyId", "createdAt", "updatedAt"]
+    },
+    "Portfolio": {
+      "title": "Portfolio",
+      "description": "Strategic portfolio grouping multiple projects",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 32 },
+        "name": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["active", "archived", "planning"] },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "companyId", "code", "name", "description", "status", "ownerId", "createdAt", "updatedAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Project or subproject within a portfolio",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "portfolioId": { "type": "string", "maxLength": 128 },
+        "parentProjectId": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 32 },
+        "name": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["active", "discovery", "delivery", "completed"] },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "companyId", "portfolioId", "parentProjectId", "code", "name", "description", "status", "ownerId", "createdAt", "updatedAt"]
+    },
+    "Artifact": {
+      "title": "Artifact",
+      "description": "Structured requirement, business rule, user story, acceptance criteria, test case, or architecture decision",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "code": { "type": "string", "maxLength": 32 },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "portfolioId": { "type": "string", "maxLength": 128 },
+        "projectId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["business_need", "requirement", "business_rule", "user_story", "acceptance_criteria", "test_case", "architecture_decision", "api_spec", "assumption", "constraint", "change_request", "visual_asset"] },
+        "title": { "type": "string", "maxLength": 300 },
+        "description": { "type": "string", "maxLength": 5000 },
+        "rationale": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["draft", "pending_review", "approved", "revision_requested", "excluded"] },
+        "validationStatus": { "type": "string", "enum": ["passed", "failed", "warning"] },
+        "validationNotes": { "type": "string", "maxLength": 1000 },
+        "version": { "type": "number" },
+        "sourceRefs": { "type": "array" },
+        "linkedArtifactIds": { "type": "array" },
+        "authorId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "code", "companyId", "portfolioId", "projectId", "type", "title", "description", "rationale", "status", "validationStatus", "validationNotes", "version", "sourceRefs", "linkedArtifactIds", "authorId", "createdAt", "updatedAt"]
+    },
+    "LivingDocument": {
+      "title": "LivingDocument",
+      "description": "Derived living solution document (BRD, FRD, SRS, etc.)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "code": { "type": "string", "maxLength": 32 },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "projectId": { "type": "string", "maxLength": 128 },
+        "docType": { "type": "string", "enum": ["BRD", "FRD", "SRS", "BUSINESS_RULES", "USER_STORIES", "ARCH_DECISIONS", "API_SPECS", "TEST_PLANS", "SECURITY_NFR", "HANDOVER"] },
+        "title": { "type": "string", "maxLength": 300 },
+        "content": { "type": "string", "maxLength": 20000 },
+        "status": { "type": "string", "enum": ["draft", "approved", "needs_sync"] },
+        "version": { "type": "number" },
+        "sourceArtifactIds": { "type": "array" },
+        "authorId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "code", "companyId", "projectId", "docType", "title", "content", "status", "version", "sourceArtifactIds", "authorId", "createdAt", "updatedAt"]
+    },
+    "AiTask": {
+      "title": "AiTask",
+      "description": "Orchestrated 11-stage AI lifecycle execution record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "projectId": { "type": "string", "maxLength": 128 },
+        "intent": { "type": "string", "maxLength": 3000 },
+        "inferredContext": { "type": "string", "maxLength": 2000 },
+        "mode": { "type": "string", "enum": ["assistant", "workflow", "multi_agent"] },
+        "currentStage": { "type": "number" },
+        "status": { "type": "string", "enum": ["running", "paused", "awaiting_clarification", "awaiting_approval", "completed", "failed"] },
+        "clarificationQuestions": { "type": "string", "maxLength": 3000 },
+        "planSummary": { "type": "string", "maxLength": 3000 },
+        "generatedArtifactIds": { "type": "array" },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "companyId", "projectId", "intent", "inferredContext", "mode", "currentStage", "status", "clarificationQuestions", "planSummary", "generatedArtifactIds", "ownerId", "createdAt", "updatedAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable security and lifecycle audit log entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "companyId": { "type": "string", "maxLength": 128 },
+        "actorId": { "type": "string", "maxLength": 128 },
+        "actorEmail": { "type": "string", "maxLength": 256 },
+        "action": { "type": "string", "maxLength": 200 },
+        "targetType": { "type": "string", "maxLength": 100 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 2000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "companyId", "actorId", "actorEmail", "action", "targetType", "targetId", "details", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/companies/{companyId}": {
+      "schema": { "$ref": "#/entities/Company" },
+      "description": "Tenant companies provisioned by Platform Admin"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profiles containing PII and tenant role assignment"
+    },
+    "/portfolios/{portfolioId}": {
+      "schema": { "$ref": "#/entities/Portfolio" },
+      "description": "Portfolios belonging to a tenant company"
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Projects and subprojects belonging to a portfolio"
+    },
+    "/artifacts/{artifactId}": {
+      "schema": { "$ref": "#/entities/Artifact" },
+      "description": "Requirements, business rules, user stories, acceptance criteria, and architecture artifacts"
+    },
+    "/livingDocuments/{docId}": {
+      "schema": { "$ref": "#/entities/LivingDocument" },
+      "description": "Derived living documents with version tracking"
+    },
+    "/aiTasks/{taskId}": {
+      "schema": { "$ref": "#/entities/AiTask" },
+      "description": "Orchestrated AI execution tasks"
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Immutable audit logs for security and lifecycle events"
+    }
+  }
+}
